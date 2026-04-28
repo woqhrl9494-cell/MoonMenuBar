@@ -28,7 +28,7 @@ enum MoonIconColor: String, CaseIterable {
         case .ivory:
             return NSColor(calibratedRed: 1.00, green: 0.93, blue: 0.74, alpha: 1.0)
         case .yellow:
-            return NSColor(calibratedRed: 1.00, green: 0.78, blue: 0.22, alpha: 1.0)
+            return NSColor(calibratedRed: 1.00, green: 0.80, blue: 0.04, alpha: 1.0)
         }
     }
 }
@@ -42,7 +42,7 @@ enum MoonSurfaceStyle: String, CaseIterable {
         case .none:
             return "None"
         case .craters:
-            return "Show craters"
+            return "Show crater"
         }
     }
 }
@@ -110,11 +110,20 @@ enum MoonIconRenderer {
         let litAlpha = 0.72 + 0.28 * perceptualLevel
         let darkAlpha = 0.10
         let edgeAlpha = 0.78
-        let craters: [(x: Double, y: Double, radius: Double, strength: Double)] = [
-            (-0.43, -0.22, 0.33, 0.70),
-            (0.20, -0.40, 0.28, 0.62),
-            (-0.14, 0.44, 0.24, 0.56),
-            (0.45, 0.12, 0.18, 0.44)
+        let realMaria = [
+            RealMoonMare(x: -0.42, y: -0.40, radiusX: 0.31, radiusY: 0.20, angle: -0.28, strength: 0.30),
+            RealMoonMare(x: -0.10, y: -0.42, radiusX: 0.22, radiusY: 0.29, angle: -0.08, strength: 0.23),
+            RealMoonMare(x: 0.50, y: -0.42, radiusX: 0.18, radiusY: 0.14, angle: 0.18, strength: 0.25),
+            RealMoonMare(x: 0.04, y: -0.06, radiusX: 0.22, radiusY: 0.20, angle: 0.20, strength: 0.22),
+            RealMoonMare(x: -0.30, y: 0.42, radiusX: 0.25, radiusY: 0.34, angle: -0.22, strength: 0.27),
+            RealMoonMare(x: 0.14, y: 0.36, radiusX: 0.20, radiusY: 0.15, angle: 0.15, strength: 0.17),
+            RealMoonMare(x: -0.70, y: 0.18, radiusX: 0.09, radiusY: 0.30, angle: -0.36, strength: 0.18)
+        ]
+        let realImpacts = [
+            RealMoonImpact(x: 0.50, y: -0.42, radiusX: 0.20, radiusY: 0.15, angle: 0.16, strength: 0.18),
+            RealMoonImpact(x: -0.67, y: 0.52, radiusX: 0.08, radiusY: 0.12, angle: -0.42, strength: 0.14),
+            RealMoonImpact(x: -0.36, y: -0.08, radiusX: 0.12, radiusY: 0.10, angle: 0.28, strength: 0.10),
+            RealMoonImpact(x: 0.28, y: 0.08, radiusX: 0.10, radiusY: 0.08, angle: -0.30, strength: 0.09)
         ]
 
         for py in 0..<pixels {
@@ -137,14 +146,18 @@ enum MoonIconRenderer {
                 var blue = rgb.blue * sphereShade
                 var alpha = isLit ? litAlpha : darkAlpha
 
-                if surfaceStyle == .craters, isLit {
-                    let craterShade = craterStrength(atX: x, y: y, craters: craters)
-                    if craterShade > 0.0 {
-                        let shade = craterShade * 0.58
-                        red *= 1.0 - shade
-                        green *= 1.0 - shade
-                        blue *= 1.0 - shade
-                        alpha = min(1.0, alpha + craterShade * 0.12)
+                if isLit {
+                    switch surfaceStyle {
+                    case .none:
+                        break
+                    case .craters:
+                        let tone = realCraterTone(atX: x, y: y, maria: realMaria, impacts: realImpacts)
+                        if tone.shade > 0.0 || tone.highlight > 0.0 {
+                            red = min(1.0, red * (1.0 - tone.shade) + rgb.red * tone.highlight)
+                            green = min(1.0, green * (1.0 - tone.shade) + rgb.green * tone.highlight)
+                            blue = min(1.0, blue * (1.0 - tone.shade) + rgb.blue * tone.highlight)
+                            alpha = min(1.0, alpha + tone.alpha)
+                        }
                     }
                 }
 
@@ -196,24 +209,95 @@ enum MoonIconRenderer {
 
 }
 
-private func craterStrength(
+private struct RealMoonMare {
+    let x: Double
+    let y: Double
+    let radiusX: Double
+    let radiusY: Double
+    let angle: Double
+    let strength: Double
+}
+
+private struct RealMoonImpact {
+    let x: Double
+    let y: Double
+    let radiusX: Double
+    let radiusY: Double
+    let angle: Double
+    let strength: Double
+}
+
+private func realCraterTone(
     atX x: Double,
     y: Double,
-    craters: [(x: Double, y: Double, radius: Double, strength: Double)]
-) -> Double {
-    var strength = 0.0
-    for crater in craters {
-        let dx = x - crater.x
-        let dy = y - crater.y
-        let distance = sqrt(dx * dx + dy * dy)
-        guard distance < crater.radius else { continue }
+    maria: [RealMoonMare],
+    impacts: [RealMoonImpact]
+) -> (shade: Double, highlight: Double, alpha: Double) {
+    var shade = 0.0
+    var highlight = 0.0
+    var alpha = 0.0
+    let surfaceGrain = 0.5 + 0.5 * sin((x * 39.0 + y * 21.0) * Double.pi)
+        * sin((x * 13.0 - y * 31.0) * Double.pi)
+    shade += max(0.0, surfaceGrain - 0.62) * 0.045
+    highlight += max(0.0, 0.30 - surfaceGrain) * 0.050
 
-        let normalized = distance / crater.radius
-        let bowl = pow(1.0 - normalized, 0.75) * crater.strength
-        let innerShadow = exp(-pow(normalized / 0.55, 2.0)) * crater.strength * 0.24
-        strength += bowl + innerShadow
+    for mare in maria {
+        let distance = ellipticalDistance(atX: x, y: y, featureX: mare.x, featureY: mare.y, radiusX: mare.radiusX, radiusY: mare.radiusY, angle: mare.angle)
+        guard distance < 1.55 else { continue }
+
+        let interior = exp(-pow(distance / 0.84, 2.2))
+        let feather = exp(-pow((distance - 0.96) / 0.30, 2.0)) * 0.35
+        let mottling = 0.88 + 0.12 * sin((x * 23.0 - y * 19.0 + mare.angle * 7.0) * Double.pi)
+        shade += mare.strength * (interior + feather) * mottling
     }
-    return min(0.58, strength)
+
+    let lightX = -0.62
+    let lightY = -0.78
+    for impact in impacts {
+        let dx = x - impact.x
+        let dy = y - impact.y
+        let cosAngle = cos(impact.angle)
+        let sinAngle = sin(impact.angle)
+        let rx = dx * cosAngle + dy * sinAngle
+        let ry = -dx * sinAngle + dy * cosAngle
+        let ux = rx / impact.radiusX
+        let uy = ry / impact.radiusY
+        let distance = sqrt(ux * ux + uy * uy)
+        guard distance < 1.28 else { continue }
+
+        let localLight = ux * lightX + uy * lightY
+        let rim = exp(-pow((distance - 0.92) / 0.13, 2.0)) * impact.strength
+        let bowl = exp(-pow(distance / 0.62, 2.0)) * impact.strength * 0.45
+        shade += bowl + max(0.0, -localLight) * rim * 0.28
+        highlight += max(0.0, localLight) * rim * 0.24
+        alpha += min(0.020, (rim + bowl) * 0.04)
+    }
+
+    return (
+        shade: min(0.46, shade),
+        highlight: min(0.14, highlight),
+        alpha: min(0.10, alpha)
+    )
+}
+
+private func ellipticalDistance(
+    atX x: Double,
+    y: Double,
+    featureX: Double,
+    featureY: Double,
+    radiusX: Double,
+    radiusY: Double,
+    angle: Double
+) -> Double {
+    let dx = x - featureX
+    let dy = y - featureY
+    let cosAngle = cos(angle)
+    let sinAngle = sin(angle)
+    let rx = dx * cosAngle + dy * sinAngle
+    let ry = -dx * sinAngle + dy * cosAngle
+    let ux = rx / radiusX
+    let uy = ry / radiusY
+    return sqrt(ux * ux + uy * uy)
 }
 
 private extension NSColor {

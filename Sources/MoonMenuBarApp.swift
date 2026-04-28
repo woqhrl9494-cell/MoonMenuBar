@@ -187,6 +187,9 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     private var surfaceStyle: MoonSurfaceStyle {
         get {
             let raw = UserDefaults.standard.string(forKey: surfaceStyleKey)
+            if raw == "realCrater" {
+                return .craters
+            }
             return MoonSurfaceStyle(rawValue: raw ?? "") ?? .none
         }
         set {
