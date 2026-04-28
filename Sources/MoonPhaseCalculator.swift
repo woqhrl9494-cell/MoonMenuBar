@@ -174,10 +174,10 @@ struct MoonPhaseCalculator {
 
     private static func compassDirection(_ azimuthDeg: Double) -> String {
         let directions = [
-            "북", "북북동", "북동", "동북동",
-            "동", "동남동", "남동", "남남동",
-            "남", "남남서", "남서", "서남서",
-            "서", "서북서", "북서", "북북서"
+            "N", "NNE", "NE", "ENE",
+            "E", "ESE", "SE", "SSE",
+            "S", "SSW", "SW", "WSW",
+            "W", "WNW", "NW", "NNW"
         ]
         let index = Int(floor((azimuthDeg + 11.25) / 22.5)).modulo(directions.count)
         return directions[index]
@@ -186,23 +186,23 @@ struct MoonPhaseCalculator {
     private static func phaseNameFromAge(_ ageDays: Double) -> String {
         switch ageDays {
         case 0..<1.84566:
-            return "삭(신월)"
+            return "New Moon"
         case 1.84566..<5.53699:
-            return "초승달"
+            return "Waxing Crescent"
         case 5.53699..<9.22831:
-            return "상현달"
+            return "First Quarter"
         case 9.22831..<12.91963:
-            return "차오르는 둥근달"
+            return "Waxing Gibbous"
         case 12.91963..<16.61096:
-            return "보름달"
+            return "Full Moon"
         case 16.61096..<20.30228:
-            return "기우는 둥근달"
+            return "Waning Gibbous"
         case 20.30228..<23.99361:
-            return "하현달"
+            return "Last Quarter"
         case 23.99361..<27.68493:
-            return "그믐"
+            return "Waning Crescent"
         default:
-            return "삭(신월)"
+            return "New Moon"
         }
     }
 

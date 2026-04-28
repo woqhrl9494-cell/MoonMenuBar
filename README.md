@@ -51,6 +51,10 @@ Designed for people who find the night sky calming. For the moments you glance u
     <td>Icon luminance scales with estimated moonlight intensity</td>
   </tr>
   <tr>
+    <td>🎨 <strong>Custom moon style</strong></td>
+    <td>Choose white, silver, ivory, or yellow, with optional crater marks</td>
+  </tr>
+  <tr>
     <td>📍 <strong>Location-aware</strong></td>
     <td>Uses Core Location for your local sky</td>
   </tr>
@@ -133,7 +137,6 @@ MoonMenuBar computes everything locally using a two-body astronomical model insp
 - [ ] Moonrise / moonset times in the dropdown
 - [ ] Next full moon / new moon countdown
 - [ ] Menu bar icon morphing animation (smooth phase transitions)
-- [ ] Configurable icon style (minimal / filled / emoji)
 - [ ] Widgets for macOS Notification Center
 - [ ] Apple Silicon notarized release on the Releases page
 - [ ] Localization (Japanese · Korean · German)

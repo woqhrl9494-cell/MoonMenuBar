@@ -1,5 +1,52 @@
 import Cocoa
 
+enum MoonIconColor: String, CaseIterable {
+    case white
+    case silver
+    case ivory
+    case yellow
+
+    var menuTitle: String {
+        switch self {
+        case .white:
+            return "White"
+        case .silver:
+            return "Silver"
+        case .ivory:
+            return "Ivory"
+        case .yellow:
+            return "Yellow"
+        }
+    }
+
+    var baseColor: NSColor {
+        switch self {
+        case .white:
+            return NSColor(calibratedRed: 1.00, green: 1.00, blue: 1.00, alpha: 1.0)
+        case .silver:
+            return NSColor(calibratedRed: 0.78, green: 0.82, blue: 0.88, alpha: 1.0)
+        case .ivory:
+            return NSColor(calibratedRed: 1.00, green: 0.93, blue: 0.74, alpha: 1.0)
+        case .yellow:
+            return NSColor(calibratedRed: 1.00, green: 0.78, blue: 0.22, alpha: 1.0)
+        }
+    }
+}
+
+enum MoonSurfaceStyle: String, CaseIterable {
+    case none
+    case craters
+
+    var menuTitle: String {
+        switch self {
+        case .none:
+            return "None"
+        case .craters:
+            return "Show craters"
+        }
+    }
+}
+
 enum MoonIconRenderer {
     static func image(
         pointSize: CGFloat,
@@ -7,11 +54,30 @@ enum MoonIconRenderer {
         relativeBrightness: Double,
         waxing: Bool
     ) -> NSImage {
+        image(
+            pointSize: pointSize,
+            illumination: illumination,
+            relativeBrightness: relativeBrightness,
+            waxing: waxing,
+            color: .white,
+            surfaceStyle: .none
+        )
+    }
+
+    static func image(
+        pointSize: CGFloat,
+        illumination: Double,
+        relativeBrightness: Double,
+        waxing: Bool,
+        color: MoonIconColor,
+        surfaceStyle: MoonSurfaceStyle
+    ) -> NSImage {
         let size = max(16.0, pointSize)
         let image = NSImage(size: NSSize(width: size, height: size))
         image.isTemplate = false
         let illum = max(0.0, min(1.0, illumination))
         let brightness = max(0.0, min(1.0, relativeBrightness))
+        let rgb = color.baseColor.deviceRGBComponents
 
         let pixels = max(48, Int(ceil(size * 3.0)))
         guard let rep = NSBitmapImageRep(
@@ -44,6 +110,12 @@ enum MoonIconRenderer {
         let litAlpha = 0.72 + 0.28 * perceptualLevel
         let darkAlpha = 0.10
         let edgeAlpha = 0.78
+        let craters: [(x: Double, y: Double, radius: Double, strength: Double)] = [
+            (-0.28, -0.18, 0.18, 0.70),
+            (0.18, -0.02, 0.15, 0.62),
+            (-0.02, 0.28, 0.13, 0.56),
+            (0.34, 0.26, 0.09, 0.44)
+        ]
 
         for py in 0..<pixels {
             for px in 0..<pixels {
@@ -58,24 +130,42 @@ enum MoonIconRenderer {
                 let isLit = (x * sunX + z * sunZ) >= 0.0
                 let limbDistance = abs(sqrt(r2) - 1.0)
                 let isLimb = limbDistance < 0.055
+                let sphereShade = 0.88 + 0.12 * z
 
-                if isLit {
-                    rep.setColor(
-                        NSColor.black.withAlphaComponent(CGFloat(litAlpha)),
-                        atX: px,
-                        y: py
-                    )
-                } else {
-                    rep.setColor(
-                        NSColor.black.withAlphaComponent(CGFloat(darkAlpha)),
-                        atX: px,
-                        y: py
-                    )
+                var red = rgb.red * sphereShade
+                var green = rgb.green * sphereShade
+                var blue = rgb.blue * sphereShade
+                var alpha = isLit ? litAlpha : darkAlpha
+
+                if surfaceStyle == .craters, isLit {
+                    let craterShade = craterStrength(atX: x, y: y, craters: craters)
+                    if craterShade > 0.0 {
+                        red *= 1.0 - craterShade
+                        green *= 1.0 - craterShade
+                        blue *= 1.0 - craterShade
+                        alpha = min(1.0, alpha + craterShade * 0.26)
+                    }
                 }
+
+                rep.setColor(
+                    NSColor(
+                        calibratedRed: CGFloat(red),
+                        green: CGFloat(green),
+                        blue: CGFloat(blue),
+                        alpha: CGFloat(alpha)
+                    ),
+                    atX: px,
+                    y: py
+                )
 
                 if isLimb {
                     rep.setColor(
-                        NSColor.black.withAlphaComponent(CGFloat(edgeAlpha)),
+                        NSColor(
+                            calibratedRed: CGFloat(rgb.red),
+                            green: CGFloat(rgb.green),
+                            blue: CGFloat(rgb.blue),
+                            alpha: CGFloat(edgeAlpha)
+                        ),
                         atX: px,
                         y: py
                     )
@@ -84,7 +174,6 @@ enum MoonIconRenderer {
         }
 
         image.addRepresentation(rep)
-        image.isTemplate = true
         return image
     }
 
@@ -104,4 +193,33 @@ enum MoonIconRenderer {
         return "◔"
     }
 
+}
+
+private func craterStrength(
+    atX x: Double,
+    y: Double,
+    craters: [(x: Double, y: Double, radius: Double, strength: Double)]
+) -> Double {
+    var strength = 0.0
+    for crater in craters {
+        let dx = x - crater.x
+        let dy = y - crater.y
+        let distance = sqrt(dx * dx + dy * dy)
+        guard distance < crater.radius else { continue }
+
+        let normalized = distance / crater.radius
+        let bowl = pow(1.0 - normalized, 0.75) * crater.strength
+        let innerShadow = exp(-pow(normalized / 0.55, 2.0)) * crater.strength * 0.24
+        strength += bowl + innerShadow
+    }
+    return min(0.72, strength)
+}
+
+private extension NSColor {
+    var deviceRGBComponents: (red: Double, green: Double, blue: Double) {
+        guard let rgb = usingColorSpace(.deviceRGB) else {
+            return (1.0, 1.0, 1.0)
+        }
+        return (Double(rgb.redComponent), Double(rgb.greenComponent), Double(rgb.blueComponent))
+    }
 }

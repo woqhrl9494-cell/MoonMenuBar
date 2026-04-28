@@ -39,9 +39,11 @@ private final class MoonStatusView: NSView {
 
     private var phase: MoonPhaseInfo?
     private var displayMode: DisplayMode = .iconAndBrightness
+    private var iconColor: MoonIconColor = .white
+    private var surfaceStyle: MoonSurfaceStyle = .none
     private var isPressed = false
 
-    private let iconSize: CGFloat = 17.0
+    private let iconSize: CGFloat = 18.0
     private let sidePadding: CGFloat = 0.5
     private let textGap: CGFloat = 6.0
 
@@ -75,9 +77,16 @@ private final class MoonStatusView: NSView {
         return sidePadding * 2.0 + iconSize + textGap + ceil(textWidth)
     }
 
-    func configure(phase: MoonPhaseInfo, displayMode: DisplayMode) {
+    func configure(
+        phase: MoonPhaseInfo,
+        displayMode: DisplayMode,
+        iconColor: MoonIconColor,
+        surfaceStyle: MoonSurfaceStyle
+    ) {
         self.phase = phase
         self.displayMode = displayMode
+        self.iconColor = iconColor
+        self.surfaceStyle = surfaceStyle
         needsDisplay = true
     }
 
@@ -111,63 +120,15 @@ private final class MoonStatusView: NSView {
     }
 
     private func drawMoon(in rect: NSRect, phase: MoonPhaseInfo) {
-        let illumination = max(0.0, min(1.0, phase.illumination))
-        let brightness = max(0.0, min(1.0, phase.relativeBrightness))
-        let diskPath = NSBezierPath(ovalIn: rect)
-
-        NSColor.white.withAlphaComponent(0.30).setFill()
-        diskPath.fill()
-
-        let sunObserverAngle = acos(max(-1.0, min(1.0, 2.0 * illumination - 1.0)))
-        let side = phase.waxing ? 1.0 : -1.0
-        let sunX = side * sin(sunObserverAngle)
-        let sunZ = cos(sunObserverAngle)
-        let litAlpha = CGFloat(0.42 + 0.58 * pow(brightness, 0.45))
-
-        NSColor.white.withAlphaComponent(litAlpha).setFill()
-
-        if abs(sunX) < 1.0e-8 {
-            if sunZ > 0.0 {
-                diskPath.fill()
-            }
-        } else {
-            let steps = 96
-            let halfWidth = rect.width * 0.5
-            let halfHeight = rect.height * 0.5
-
-            for row in 0..<steps {
-                let y0 = -1.0 + 2.0 * CGFloat(row) / CGFloat(steps)
-                let y1 = -1.0 + 2.0 * CGFloat(row + 1) / CGFloat(steps)
-                let yMid = (y0 + y1) * 0.5
-                let xEdge = sqrt(max(0.0, 1.0 - Double(yMid * yMid)))
-                let boundarySign = -copysign(1.0, sunZ / sunX)
-                let xBoundary = CGFloat(boundarySign * abs(sunZ) * xEdge)
-
-                let xStartNorm: CGFloat
-                let xEndNorm: CGFloat
-                if sunX > 0.0 {
-                    xStartNorm = max(xBoundary, -CGFloat(xEdge))
-                    xEndNorm = CGFloat(xEdge)
-                } else {
-                    xStartNorm = -CGFloat(xEdge)
-                    xEndNorm = min(xBoundary, CGFloat(xEdge))
-                }
-
-                guard xEndNorm > xStartNorm else { continue }
-
-                let strip = NSRect(
-                    x: rect.midX + xStartNorm * halfWidth,
-                    y: rect.midY + y0 * halfHeight,
-                    width: (xEndNorm - xStartNorm) * halfWidth,
-                    height: (y1 - y0) * halfHeight + 0.5
-                )
-                NSBezierPath(rect: strip).fill()
-            }
-        }
-
-        NSColor.white.withAlphaComponent(0.88).setStroke()
-        diskPath.lineWidth = 1.0
-        diskPath.stroke()
+        let image = MoonIconRenderer.image(
+            pointSize: iconSize,
+            illumination: phase.illumination,
+            relativeBrightness: phase.relativeBrightness,
+            waxing: phase.waxing,
+            color: iconColor,
+            surfaceStyle: surfaceStyle
+        )
+        image.draw(in: rect)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -185,6 +146,8 @@ private final class MoonStatusView: NSView {
 
 final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     private let displayModeKey = "displayMode"
+    private let iconColorKey = "iconColor"
+    private let surfaceStyleKey = "surfaceStyle"
     private let loginAgentLabel = "com.local.moonmenubar.login"
     private let loginAgentFileName = "com.local.moonmenubar.login.plist"
 
@@ -195,7 +158,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     private var currentLocation: LocationState?
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "ko_KR")
+        f.locale = Locale(identifier: "en_US")
         f.dateStyle = .short
         f.timeStyle = .short
         return f
@@ -211,6 +174,26 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         }
     }
 
+    private var iconColor: MoonIconColor {
+        get {
+            let raw = UserDefaults.standard.string(forKey: iconColorKey)
+            return MoonIconColor(rawValue: raw ?? "") ?? .white
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: iconColorKey)
+        }
+    }
+
+    private var surfaceStyle: MoonSurfaceStyle {
+        get {
+            let raw = UserDefaults.standard.string(forKey: surfaceStyleKey)
+            return MoonSurfaceStyle(rawValue: raw ?? "") ?? .none
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: surfaceStyleKey)
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
 
@@ -218,7 +201,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         statusItem = item
         let view = MoonStatusView(frame: NSRect(x: 0.0, y: 0.0, width: 68.0, height: NSStatusBar.system.thickness))
         view.statusItem = item
-        view.toolTip = "달 위상 로딩 중..."
+        view.toolTip = "Loading Moon phase..."
         statusView = view
         item.view = view
         item.isVisible = true
@@ -252,8 +235,13 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         let brightnessText = String(format: "%.1f%%", phase.relativeBrightness * 100.0)
 
         if let statusView {
-            statusView.configure(phase: phase, displayMode: displayMode)
-            statusView.toolTip = "달 위상: \(phase.phaseName) / 상대 밝기: \(brightnessText)"
+            statusView.configure(
+                phase: phase,
+                displayMode: displayMode,
+                iconColor: iconColor,
+                surfaceStyle: surfaceStyle
+            )
+            statusView.toolTip = "Moon phase: \(phase.phaseName) / Relative brightness: \(brightnessText)"
             statusView.frame.size = NSSize(width: statusView.preferredWidth, height: NSStatusBar.system.thickness)
             item.length = statusView.preferredWidth
         }
@@ -273,11 +261,11 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        addDisabledItem("현재 시각: \(dateFormatter.string(from: Date()))", to: menu)
+        addDisabledItem("Current time: \(dateFormatter.string(from: Date()))", to: menu)
 
         if let loc = currentLocation {
             addDisabledItem(
-                String(format: "위치: %.4f, %.4f", loc.coordinate.latitude, loc.coordinate.longitude),
+                String(format: "Location: %.4f, %.4f", loc.coordinate.latitude, loc.coordinate.longitude),
                 to: menu
             )
             let position = MoonPhaseCalculator.position(
@@ -285,46 +273,52 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
                 latitudeDeg: loc.coordinate.latitude,
                 longitudeDeg: loc.coordinate.longitude
             )
-            let visibility = position.isAboveHorizon ? "보임" : "지평선 아래"
-            addDisabledItem(String(format: "현재 고도: %+.1f° (%@)", position.altitudeDeg, visibility), to: menu)
+            let visibility = position.isAboveHorizon ? "visible" : "below horizon"
+            addDisabledItem(String(format: "Current altitude: %+.1f° (%@)", position.altitudeDeg, visibility), to: menu)
             addDisabledItem(
-                String(format: "현재 방향: %@ (%.1f°)", position.compassDirection, position.azimuthDeg),
+                String(format: "Current direction: %@ (%.1f°)", position.compassDirection, position.azimuthDeg),
                 to: menu
             )
         } else {
-            addDisabledItem("위치: 확인 중...", to: menu)
-            addDisabledItem("현재 고도: 위치 확인 중...", to: menu)
-            addDisabledItem("현재 방향: 위치 확인 중...", to: menu)
+            addDisabledItem("Location: Waiting...", to: menu)
+            addDisabledItem("Current altitude: Waiting for location...", to: menu)
+            addDisabledItem("Current direction: Waiting for location...", to: menu)
         }
 
-        addDisabledItem("위상: \(phase.phaseName)", to: menu)
-        addDisabledItem("조명률: \(illuminationText)", to: menu)
-        addDisabledItem("상대 밝기: \(brightnessText) (보름달=100%)", to: menu)
+        addDisabledItem("Phase: \(phase.phaseName)", to: menu)
+        addDisabledItem("Illumination: \(illuminationText)", to: menu)
+        addDisabledItem("Relative brightness: \(brightnessText) (Full Moon=100%)", to: menu)
 
         menu.addItem(NSMenuItem.separator())
 
-        let iconOnlyItem = NSMenuItem(title: "아이콘만 표시", action: #selector(setIconOnlyMode), keyEquivalent: "")
+        let iconOnlyItem = NSMenuItem(title: "Show icon only", action: #selector(setIconOnlyMode), keyEquivalent: "")
         iconOnlyItem.target = self
         iconOnlyItem.state = displayMode == .iconOnly ? .on : .off
         menu.addItem(iconOnlyItem)
 
-        let iconBrightnessItem = NSMenuItem(title: "아이콘 + 밝기% 표시", action: #selector(setIconAndBrightnessMode), keyEquivalent: "")
+        let iconBrightnessItem = NSMenuItem(title: "Show icon + brightness %", action: #selector(setIconAndBrightnessMode), keyEquivalent: "")
         iconBrightnessItem.target = self
         iconBrightnessItem.state = displayMode == .iconAndBrightness ? .on : .off
         menu.addItem(iconBrightnessItem)
 
-        let loginItem = NSMenuItem(title: "로그인 시 자동 실행", action: #selector(toggleLoginItem), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        addIconColorMenu(to: menu)
+        addSurfaceStyleMenu(to: menu)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let loginItem = NSMenuItem(title: "Launch at login", action: #selector(toggleLoginItem), keyEquivalent: "")
         loginItem.target = self
         loginItem.state = isLoginItemEnabled() ? .on : .off
         menu.addItem(loginItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let refreshItem = NSMenuItem(title: "새로고침", action: #selector(updateStatus), keyEquivalent: "r")
+        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(updateStatus), keyEquivalent: "r")
         refreshItem.target = self
         menu.addItem(refreshItem)
 
-        let quitItem = NSMenuItem(title: "종료", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -338,6 +332,38 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         menu.addItem(item)
     }
 
+    private func addIconColorMenu(to menu: NSMenu) {
+        let parent = NSMenuItem(title: "Moon color", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+
+        for color in MoonIconColor.allCases {
+            let item = NSMenuItem(title: color.menuTitle, action: #selector(setIconColor(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = color.rawValue
+            item.state = iconColor == color ? .on : .off
+            submenu.addItem(item)
+        }
+
+        parent.submenu = submenu
+        menu.addItem(parent)
+    }
+
+    private func addSurfaceStyleMenu(to menu: NSMenu) {
+        let parent = NSMenuItem(title: "Moon shape", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+
+        for style in MoonSurfaceStyle.allCases {
+            let item = NSMenuItem(title: style.menuTitle, action: #selector(setSurfaceStyle(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = style.rawValue
+            item.state = surfaceStyle == style ? .on : .off
+            submenu.addItem(item)
+        }
+
+        parent.submenu = submenu
+        menu.addItem(parent)
+    }
+
     @objc private func setIconOnlyMode() {
         displayMode = .iconOnly
         updateStatus()
@@ -345,6 +371,30 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     @objc private func setIconAndBrightnessMode() {
         displayMode = .iconAndBrightness
+        updateStatus()
+    }
+
+    @objc private func setIconColor(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let color = MoonIconColor(rawValue: rawValue)
+        else {
+            return
+        }
+
+        iconColor = color
+        updateStatus()
+    }
+
+    @objc private func setSurfaceStyle(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let style = MoonSurfaceStyle(rawValue: rawValue)
+        else {
+            return
+        }
+
+        surfaceStyle = style
         updateStatus()
     }
 
@@ -361,8 +411,8 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         let appPath = Bundle.main.bundlePath
         if appPath.hasPrefix("/Volumes/") {
             showAlert(
-                title: "먼저 Applications로 옮기세요",
-                message: "DMG 안에서 실행한 앱은 다음 로그인 때 사라질 수 있습니다.\nMoonMenuBar.app을 Applications 폴더로 옮긴 뒤 다시 켜세요."
+                title: "Move to Applications first",
+                message: "Apps launched from inside a DMG may not be available at the next login.\nMove MoonMenuBar.app to the Applications folder, then reopen it."
             )
             return
         }
@@ -383,7 +433,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
             let data = try PropertyListSerialization.data(fromPropertyList: payload, format: .xml, options: 0)
             try data.write(to: agentURL, options: .atomic)
         } catch {
-            showAlert(title: "자동 실행 설정 실패", message: error.localizedDescription)
+            showAlert(title: "Failed to configure launch at login", message: error.localizedDescription)
         }
     }
 
