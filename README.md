@@ -33,16 +33,40 @@ Designed for people who find the night sky calming. For the moments you glance u
 
 ## Features
 
-| | |
-|---|---|
-| 🌙 **Phase icon** | Live moon phase glyph in the menu bar, updated continuously |
-| 💡 **Moonlight brightness** | Relative brightness (%) compared to a full moon |
-| 🧭 **Altitude & direction** | Current moon altitude and compass bearing for your location |
-| 🔆 **Adaptive icon brightness** | Icon luminance scales with estimated moonlight intensity |
-| 📍 **Location-aware** | Uses Core Location for your local sky |
-| 🔐 **Privacy-first** | No network requests, no telemetry, no accounts |
-| 🚀 **Launch at login** | Starts silently with macOS |
-| 📦 **Self-contained** | Single `.app` bundle, no dependencies |
+<table>
+  <tr>
+    <td>🌙 <strong>Phase icon</strong></td>
+    <td>Live moon phase glyph in the menu bar, updated continuously</td>
+  </tr>
+  <tr>
+    <td>💡 <strong>Moonlight brightness</strong></td>
+    <td>Relative brightness (%) compared to a full moon</td>
+  </tr>
+  <tr>
+    <td>🧭 <strong>Altitude &amp; direction</strong></td>
+    <td>Current moon altitude and compass bearing for your location</td>
+  </tr>
+  <tr>
+    <td>🔆 <strong>Adaptive icon brightness</strong></td>
+    <td>Icon luminance scales with estimated moonlight intensity</td>
+  </tr>
+  <tr>
+    <td>📍 <strong>Location-aware</strong></td>
+    <td>Uses Core Location for your local sky</td>
+  </tr>
+  <tr>
+    <td>🔐 <strong>Privacy-first</strong></td>
+    <td>No network requests, no telemetry, no accounts</td>
+  </tr>
+  <tr>
+    <td>🚀 <strong>Launch at login</strong></td>
+    <td>Starts silently with macOS</td>
+  </tr>
+  <tr>
+    <td>📦 <strong>Self-contained</strong></td>
+    <td>Single <code>.app</code> bundle, no dependencies</td>
+  </tr>
+</table>
 
 ---
 
