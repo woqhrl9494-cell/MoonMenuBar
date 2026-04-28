@@ -168,13 +168,3 @@ Please keep commits focused: one logical change per commit.
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
-
----
-
-## Star History
-
-<div align="center">
-
-[![Star History Chart](https://api.star-history.com/svg?repos=woqhrl9494-cell/MoonMenuBar&type=Date)](https://star-history.com/#woqhrl9494-cell/MoonMenuBar&Date)
-
-</div>
