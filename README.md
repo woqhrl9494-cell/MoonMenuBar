@@ -25,6 +25,10 @@
 Most apps compete for your attention.  
 This one doesn't.
 
+Weather has always had a place on our screens. The moon is easier to forget.
+
+MoonMenuBar is for anyone who still wants to see it: the person who looks for the moon on the way home, and the person working late inside a building, far from the night sky. It brings a small piece of that sky back to your menu bar.
+
 MoonMenuBar tucks the current moon phase into your menu bar — a single glyph that shifts from 🌑 to 🌕 and back, night after night. No notifications, no feeds, no noise. Just a quiet reminder that something ancient and beautiful is moving overhead.
 
 Designed for people who find the night sky calming. For the moments you glance up from the screen and wonder what the moon looks like right now.
