@@ -132,20 +132,6 @@ MoonMenuBar computes everything locally using a two-body astronomical model insp
 
 ---
 
-## Roadmap
-
-- [ ] Moonrise / moonset times in the dropdown
-- [ ] Next full moon / new moon countdown
-- [ ] Menu bar icon morphing animation (smooth phase transitions)
-- [ ] Widgets for macOS Notification Center
-- [ ] Apple Silicon notarized release on the Releases page
-- [ ] Localization (Japanese · Korean · German)
-- [ ] Optional gentle daily notification at moonrise
-
-Have an idea? [Open an issue](https://github.com/woqhrl9494-cell/MoonMenuBar/issues/new) or vote on existing ones.
-
----
-
 ## FAQ
 
 <details>
