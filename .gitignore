@@ -1,0 +1,17 @@
+.DS_Store
+
+# Build artifacts
+MoonMenuBar.app/
+MoonMenuBar.dmg
+dist/
+*.dSYM/
+
+# Swift / Xcode local files
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Editor and logs
+*.swp
+*.log

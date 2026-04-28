@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.local.moonmenubar</string>
+    <key>CFBundleName</key>
+    <string>MoonMenuBar</string>
+    <key>CFBundleDisplayName</key>
+    <string>MoonMenuBar</string>
+    <key>CFBundleExecutable</key>
+    <string>MoonMenuBar</string>
+    <key>CFBundleIconFile</key>
+    <string>moon.icns</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>11</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>MoonMenuBar by Your Name</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>메뉴바에서 사용자 위치 기준 달 위상을 표시하려면 위치 접근 권한이 필요합니다.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>메뉴바에서 사용자 위치 기준 달 위상을 표시하려면 위치 접근 권한이 필요합니다.</string>
+</dict>
+</plist>
