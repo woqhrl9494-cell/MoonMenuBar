@@ -111,10 +111,10 @@ enum MoonIconRenderer {
         let darkAlpha = 0.10
         let edgeAlpha = 0.78
         let craters: [(x: Double, y: Double, radius: Double, strength: Double)] = [
-            (-0.28, -0.18, 0.18, 0.70),
-            (0.18, -0.02, 0.15, 0.62),
-            (-0.02, 0.28, 0.13, 0.56),
-            (0.34, 0.26, 0.09, 0.44)
+            (-0.43, -0.22, 0.33, 0.70),
+            (0.20, -0.40, 0.28, 0.62),
+            (-0.14, 0.44, 0.24, 0.56),
+            (0.45, 0.12, 0.18, 0.44)
         ]
 
         for py in 0..<pixels {
@@ -140,10 +140,11 @@ enum MoonIconRenderer {
                 if surfaceStyle == .craters, isLit {
                     let craterShade = craterStrength(atX: x, y: y, craters: craters)
                     if craterShade > 0.0 {
-                        red *= 1.0 - craterShade
-                        green *= 1.0 - craterShade
-                        blue *= 1.0 - craterShade
-                        alpha = min(1.0, alpha + craterShade * 0.26)
+                        let shade = craterShade * 0.58
+                        red *= 1.0 - shade
+                        green *= 1.0 - shade
+                        blue *= 1.0 - shade
+                        alpha = min(1.0, alpha + craterShade * 0.12)
                     }
                 }
 
@@ -212,7 +213,7 @@ private func craterStrength(
         let innerShadow = exp(-pow(normalized / 0.55, 2.0)) * crater.strength * 0.24
         strength += bowl + innerShadow
     }
-    return min(0.72, strength)
+    return min(0.58, strength)
 }
 
 private extension NSColor {
