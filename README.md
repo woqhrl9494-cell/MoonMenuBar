@@ -8,6 +8,8 @@
 
 *Calm. Emotional. Romantic.*
 
+<sub>조용히 달을 곁에 두는 macOS 메뉴바 앱</sub>
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)](https://github.com/woqhrl9494-cell/MoonMenuBar/releases)
 [![Swift](https://img.shields.io/badge/Swift-5-orange?logo=swift)](https://swift.org)
@@ -22,16 +24,9 @@
 
 ## Why MoonMenuBar
 
-Most apps compete for your attention.  
-This one doesn't.
+Most apps compete for your attention. This one doesn't.
 
-Weather has always had a place on our screens. The moon is easier to forget.
-
-MoonMenuBar is for anyone who still wants to see it: the person who looks for the moon on the way home, and the person working late inside a building, far from the night sky. It brings a small piece of that sky back to your menu bar.
-
-MoonMenuBar tucks the current moon phase into your menu bar — a single glyph that shifts from 🌑 to 🌕 and back, night after night. No notifications, no feeds, no noise. Just a quiet reminder that something ancient and beautiful is moving overhead.
-
-Designed for people who find the night sky calming. For the moments you glance up from the screen and wonder what the moon looks like right now.
+The moon is easier to forget than the weather. MoonMenuBar tucks the current phase into your menu bar — a single glyph that shifts from 🌑 to 🌕 and back, night after night. No notifications. No feeds. Just a quiet reminder that something ancient is still moving overhead.
 
 ---
 
@@ -56,7 +51,7 @@ Designed for people who find the night sky calming. For the moments you glance u
   </tr>
   <tr>
     <td>🎨 <strong>Custom moon style</strong></td>
-    <td>Choose white, silver, ivory, or yellow, with optional crater marks</td>
+    <td>Choose white, silver, ivory, or yellow, with an optional moon surface texture</td>
   </tr>
   <tr>
     <td>📍 <strong>Location-aware</strong></td>
@@ -82,9 +77,15 @@ Designed for people who find the night sky calming. For the moments you glance u
 
 ### Download (recommended)
 
-Grab the latest `.dmg` from the [**Releases page**](https://github.com/woqhrl9494-cell/MoonMenuBar/releases/latest), open it, and drag `MoonMenuBar.app` to `/Applications`.
+[![Download MoonMenuBar.dmg](https://img.shields.io/badge/Download-MoonMenuBar.dmg-2ea44f?style=for-the-badge&logo=apple)](https://github.com/woqhrl9494-cell/MoonMenuBar/releases/latest)
+
+Download the latest `.dmg`, open it, and drag `MoonMenuBar.app` to `/Applications`.
 
 > Move the app to `/Applications` before enabling **Launch at Login** — running directly from the DMG volume can make the login item unreliable.
+
+### First launch on macOS
+
+MoonMenuBar is an unsigned personal project, so macOS Gatekeeper may warn that the developer cannot be verified. If that happens, open **System Settings → Privacy & Security**, find the MoonMenuBar warning, and choose **Open Anyway**. You can also Control-click `MoonMenuBar.app` in `/Applications`, choose **Open**, then confirm **Open** once.
 
 ### Build from source
 
@@ -95,9 +96,19 @@ cd MoonMenuBar
 open MoonMenuBar.app
 ```
 
-**Requirements:** macOS · Swift compiler · Xcode Command Line Tools
+**Requirements:** macOS 14.0 Sonoma or later · Swift compiler · Xcode Command Line Tools
 
 The build script produces `MoonMenuBar.app` and `MoonMenuBar.dmg` locally (both are gitignored).
+
+---
+
+## Recent Updates
+
+- **v1.1.4** — Customizable moon icon styles: white, silver, ivory, yellow, and optional moon surface marks.
+- **v1.1.3** — Replaced the bundled app icon asset and attached an updated DMG.
+- **v1.1.2** — Redesigned the app icon with a dark rounded-square moon phase design.
+
+> See the [releases page](https://github.com/woqhrl9494-cell/MoonMenuBar/releases) for the full history.
 
 ---
 
@@ -125,6 +136,12 @@ MoonMenuBar computes everything locally using a two-body astronomical model insp
 | Icon brightness | Illumination mapped to display luminance |
 
 **Transparency note:** The model is a fast approximation — it omits atmospheric refraction, terrain obstructions, clouds, and higher-order orbital perturbations. Expect accuracy within ~1° for altitude/azimuth and within ~1% for illumination under typical conditions. This is intentional: the goal is a lightweight, offline-first companion, not an ephemeris engine.
+
+---
+
+## A Note from the Author
+
+Inspired by walks home under a half moon, and by Jean Meeus's *Astronomical Algorithms* — the book that quietly powers many moon-phase calculators.
 
 ---
 
@@ -185,3 +202,5 @@ Please keep commits focused: one logical change per commit.
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+Built with care by [Jaebok Lee](https://github.com/woqhrl9494-cell) · ok7393@hanyang.ac.kr

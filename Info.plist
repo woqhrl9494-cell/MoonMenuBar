@@ -23,7 +23,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>MoonMenuBar by Jaebok Lee</string>
+	<string>MoonMenuBar by Jaebok Lee (ok7393@hanyang.ac.kr)</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>MoonMenuBar needs your location to show Moon phase, altitude, and direction for where you are.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

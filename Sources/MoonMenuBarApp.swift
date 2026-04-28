@@ -317,6 +317,12 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        let aboutItem = NSMenuItem(title: "About MoonMenuBar", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let refreshItem = NSMenuItem(title: "Refresh", action: #selector(updateStatus), keyEquivalent: "r")
         refreshItem.target = self
         menu.addItem(refreshItem)
@@ -486,6 +492,13 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         alert.informativeText = message
         alert.alertStyle = .warning
         alert.runModal()
+    }
+
+    @objc private func showAbout() {
+        showAlert(
+            title: "MoonMenuBar",
+            message: "Created by Jaebok Lee\nok7393@hanyang.ac.kr"
+        )
     }
 
     @objc private func quitApp() {
