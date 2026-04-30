@@ -18,6 +18,10 @@
 
 <img src="Assets/demo.gif" width="720" alt="MoonMenuBar demo" onerror="this.style.display='none'">
 
+<br><br>
+
+<img src="Assets/demo-altitude-rise.gif" width="720" alt="Altitude rise icon mode demo" onerror="this.style.display='none'">
+
 </div>
 
 ---
@@ -44,6 +48,10 @@ The moon is easier to forget than the weather. MoonMenuBar tucks the current pha
   <tr>
     <td>🧭 <strong>Altitude &amp; direction</strong></td>
     <td>Current moon altitude and compass bearing for your location</td>
+  </tr>
+  <tr>
+    <td>🌘 <strong>Altitude rise icon</strong></td>
+    <td>Optional menu bar mode where the moon rises into view as its altitude climbs</td>
   </tr>
   <tr>
     <td>🔆 <strong>Adaptive icon brightness</strong></td>

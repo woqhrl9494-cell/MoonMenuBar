@@ -5,6 +5,7 @@ import Darwin
 private enum DisplayMode: String {
     case iconOnly
     case iconAndBrightness
+    case altitudeIcon
 }
 
 private final class MenuInfoItemView: NSView {
@@ -41,6 +42,7 @@ private final class MoonStatusView: NSView {
     private var displayMode: DisplayMode = .iconAndBrightness
     private var iconColor: MoonIconColor = .white
     private var surfaceStyle: MoonSurfaceStyle = .none
+    private var altitudeTrack: MoonAltitudeTrackInfo?
     private var isPressed = false
 
     private let iconSize: CGFloat = 18.0
@@ -69,7 +71,7 @@ private final class MoonStatusView: NSView {
     }
 
     var preferredWidth: CGFloat {
-        if displayMode == .iconOnly {
+        if displayMode == .iconOnly || displayMode == .altitudeIcon {
             return sidePadding * 2.0 + iconSize
         }
 
@@ -81,12 +83,14 @@ private final class MoonStatusView: NSView {
         phase: MoonPhaseInfo,
         displayMode: DisplayMode,
         iconColor: MoonIconColor,
-        surfaceStyle: MoonSurfaceStyle
+        surfaceStyle: MoonSurfaceStyle,
+        altitudeTrack: MoonAltitudeTrackInfo?
     ) {
         self.phase = phase
         self.displayMode = displayMode
         self.iconColor = iconColor
         self.surfaceStyle = surfaceStyle
+        self.altitudeTrack = altitudeTrack
         needsDisplay = true
     }
 
@@ -106,7 +110,9 @@ private final class MoonStatusView: NSView {
             width: iconSize,
             height: iconSize
         )
-        drawMoon(in: iconRect, phase: phase)
+        if let resolvedIconRect = resolvedMoonRect(from: iconRect) {
+            drawMoon(in: resolvedIconRect, phase: phase)
+        }
 
         if displayMode == .iconAndBrightness {
             let text = brightnessLabel as NSString
@@ -117,6 +123,34 @@ private final class MoonStatusView: NSView {
             )
             text.draw(at: textOrigin, withAttributes: textAttributes)
         }
+    }
+
+    private func resolvedMoonRect(from centeredRect: NSRect) -> NSRect? {
+        guard displayMode == .altitudeIcon else {
+            return centeredRect
+        }
+
+        guard let altitudeTrack else {
+            return centeredRect
+        }
+
+        guard altitudeTrack.isAboveHorizon, altitudeTrack.peakAltitudeDeg > 0.0 else {
+            return nil
+        }
+
+        // Altitude mode maps the horizon to a fully clipped icon and the
+        // current visible-pass peak to the same centered placement as normal mode.
+        let fraction = CGFloat(max(0.0, min(1.0, altitudeTrack.visibleFraction)))
+        let hiddenY = -iconSize
+        let peakY = floor((bounds.height - iconSize) * 0.5)
+        let y = hiddenY + (peakY - hiddenY) * fraction
+
+        return NSRect(
+            x: centeredRect.origin.x,
+            y: y,
+            width: centeredRect.width,
+            height: centeredRect.height
+        )
     }
 
     private func drawMoon(in rect: NSRect, phase: MoonPhaseInfo) {
@@ -232,19 +266,40 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     @objc private func updateStatus() {
         guard let item = statusItem else { return }
 
+        let now = Date()
         let tz = currentLocation?.timeZone ?? .current
-        let phase = MoonPhaseCalculator.phase(for: Date(), timeZone: tz)
+        let phase = MoonPhaseCalculator.phase(for: now, timeZone: tz)
         let illuminationText = String(format: "%.1f%%", phase.illumination * 100.0)
         let brightnessText = String(format: "%.1f%%", phase.relativeBrightness * 100.0)
+        var position: MoonPositionInfo?
+        var altitudeTrack: MoonAltitudeTrackInfo?
+
+        if let loc = currentLocation {
+            position = MoonPhaseCalculator.position(
+                for: now,
+                latitudeDeg: loc.coordinate.latitude,
+                longitudeDeg: loc.coordinate.longitude
+            )
+            altitudeTrack = MoonPhaseCalculator.altitudeTrack(
+                for: now,
+                latitudeDeg: loc.coordinate.latitude,
+                longitudeDeg: loc.coordinate.longitude
+            )
+        }
 
         if let statusView {
             statusView.configure(
                 phase: phase,
                 displayMode: displayMode,
                 iconColor: iconColor,
-                surfaceStyle: surfaceStyle
+                surfaceStyle: surfaceStyle,
+                altitudeTrack: altitudeTrack
             )
-            statusView.toolTip = "Moon phase: \(phase.phaseName) / Relative brightness: \(brightnessText)"
+            statusView.toolTip = statusToolTip(
+                phase: phase,
+                brightnessText: brightnessText,
+                altitudeTrack: altitudeTrack
+            )
             statusView.frame.size = NSSize(width: statusView.preferredWidth, height: NSStatusBar.system.thickness)
             item.length = statusView.preferredWidth
         }
@@ -252,40 +307,55 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         item.menu = makeMenu(
             phase: phase,
             illuminationText: illuminationText,
-            brightnessText: brightnessText
+            brightnessText: brightnessText,
+            now: now,
+            position: position,
+            altitudeTrack: altitudeTrack
         )
     }
 
     private func makeMenu(
         phase: MoonPhaseInfo,
         illuminationText: String,
-        brightnessText: String
+        brightnessText: String,
+        now: Date,
+        position: MoonPositionInfo?,
+        altitudeTrack: MoonAltitudeTrackInfo?
     ) -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        addDisabledItem("Current time: \(dateFormatter.string(from: Date()))", to: menu)
+        addDisabledItem("Current time: \(dateFormatter.string(from: now))", to: menu)
 
         if let loc = currentLocation {
             addDisabledItem(
                 String(format: "Location: %.4f, %.4f", loc.coordinate.latitude, loc.coordinate.longitude),
                 to: menu
             )
-            let position = MoonPhaseCalculator.position(
-                for: Date(),
-                latitudeDeg: loc.coordinate.latitude,
-                longitudeDeg: loc.coordinate.longitude
-            )
-            let visibility = position.isAboveHorizon ? "visible" : "below horizon"
-            addDisabledItem(String(format: "Current altitude: %+.1f° (%@)", position.altitudeDeg, visibility), to: menu)
-            addDisabledItem(
-                String(format: "Current direction: %@ (%.1f°)", position.compassDirection, position.azimuthDeg),
-                to: menu
-            )
+            if let position {
+                let visibility = position.isAboveHorizon ? "visible" : "below horizon"
+                addDisabledItem(String(format: "Current altitude: %+.1f° (%@)", position.altitudeDeg, visibility), to: menu)
+                addDisabledItem(
+                    String(format: "Current direction: %@ (%.1f°)", position.compassDirection, position.azimuthDeg),
+                    to: menu
+                )
+            }
+
+            if let altitudeTrack, altitudeTrack.isAboveHorizon, let peakDate = altitudeTrack.peakDate {
+                let fractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
+                addDisabledItem(
+                    String(format: "Current pass peak: %+.1f° at %@", altitudeTrack.peakAltitudeDeg, dateFormatter.string(from: peakDate)),
+                    to: menu
+                )
+                addDisabledItem("Altitude icon height: \(fractionText) of current pass peak", to: menu)
+            } else {
+                addDisabledItem("Altitude icon height: hidden below horizon", to: menu)
+            }
         } else {
             addDisabledItem("Location: Waiting...", to: menu)
             addDisabledItem("Current altitude: Waiting for location...", to: menu)
             addDisabledItem("Current direction: Waiting for location...", to: menu)
+            addDisabledItem("Altitude icon height: Waiting for location...", to: menu)
         }
 
         addDisabledItem("Phase: \(phase.phaseName)", to: menu)
@@ -303,6 +373,11 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         iconBrightnessItem.target = self
         iconBrightnessItem.state = displayMode == .iconAndBrightness ? .on : .off
         menu.addItem(iconBrightnessItem)
+
+        let altitudeIconItem = NSMenuItem(title: "Show altitude rise icon", action: #selector(setAltitudeIconMode), keyEquivalent: "")
+        altitudeIconItem.target = self
+        altitudeIconItem.state = displayMode == .altitudeIcon ? .on : .off
+        menu.addItem(altitudeIconItem)
 
         menu.addItem(NSMenuItem.separator())
         addIconColorMenu(to: menu)
@@ -339,6 +414,30 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         item.view = MenuInfoItemView(title: title)
         item.isEnabled = false
         menu.addItem(item)
+    }
+
+    private func statusToolTip(
+        phase: MoonPhaseInfo,
+        brightnessText: String,
+        altitudeTrack: MoonAltitudeTrackInfo?
+    ) -> String {
+        var parts = [
+            "Moon phase: \(phase.phaseName)",
+            "Relative brightness: \(brightnessText)"
+        ]
+
+        if let altitudeTrack {
+            if altitudeTrack.isAboveHorizon {
+                let fractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
+                parts.append(String(format: "Altitude: %+.1f° / peak %+.1f° (%@)", altitudeTrack.currentAltitudeDeg, altitudeTrack.peakAltitudeDeg, fractionText))
+            } else {
+                parts.append(String(format: "Altitude: %+.1f° (below horizon)", altitudeTrack.currentAltitudeDeg))
+            }
+        } else if displayMode == .altitudeIcon {
+            parts.append("Altitude: waiting for location")
+        }
+
+        return parts.joined(separator: " / ")
     }
 
     private func addIconColorMenu(to menu: NSMenu) {
@@ -380,6 +479,11 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     @objc private func setIconAndBrightnessMode() {
         displayMode = .iconAndBrightness
+        updateStatus()
+    }
+
+    @objc private func setAltitudeIconMode() {
+        displayMode = .altitudeIcon
         updateStatus()
     }
 

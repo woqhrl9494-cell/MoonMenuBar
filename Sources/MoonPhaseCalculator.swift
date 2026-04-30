@@ -35,6 +35,14 @@ struct MoonPositionInfo {
     let isAboveHorizon: Bool
 }
 
+struct MoonAltitudeTrackInfo {
+    let currentAltitudeDeg: Double
+    let peakAltitudeDeg: Double
+    let visibleFraction: Double
+    let isAboveHorizon: Bool
+    let peakDate: Date?
+}
+
 struct MoonPhaseCalculator {
     static let synodicMonth: Double = 29.530588853
     private static let fullMoonMagnitude = -12.74
@@ -113,6 +121,62 @@ struct MoonPhaseCalculator {
         )
     }
 
+    static func altitudeTrack(for date: Date, latitudeDeg: Double, longitudeDeg: Double) -> MoonAltitudeTrackInfo {
+        let current = position(for: date, latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg)
+        guard current.isAboveHorizon else {
+            return MoonAltitudeTrackInfo(
+                currentAltitudeDeg: current.altitudeDeg,
+                peakAltitudeDeg: 0.0,
+                visibleFraction: 0.0,
+                isAboveHorizon: false,
+                peakDate: nil
+            )
+        }
+
+        // Formula: visibleFraction = h(now) / max_t h(t), where h(t) is lunar
+        // altitude over the current visible pass. The samples are ephemeris
+        // predictions, not future measurements.
+        let step: TimeInterval = 10.0 * 60.0
+        let maxHorizonSearch: TimeInterval = 48.0 * 60.0 * 60.0
+        let fallbackHalfWindow: TimeInterval = 18.0 * 60.0 * 60.0
+        let riseDate = horizonBoundaryDate(
+            from: date,
+            direction: -1.0,
+            step: step,
+            maxSearch: maxHorizonSearch,
+            latitudeDeg: latitudeDeg,
+            longitudeDeg: longitudeDeg
+        )
+        let setDate = horizonBoundaryDate(
+            from: date,
+            direction: 1.0,
+            step: step,
+            maxSearch: maxHorizonSearch,
+            latitudeDeg: latitudeDeg,
+            longitudeDeg: longitudeDeg
+        )
+
+        let searchStart = riseDate ?? date.addingTimeInterval(-fallbackHalfWindow)
+        let searchEnd = setDate ?? date.addingTimeInterval(fallbackHalfWindow)
+        let peak = peakAltitude(
+            from: searchStart,
+            to: searchEnd,
+            step: step,
+            latitudeDeg: latitudeDeg,
+            longitudeDeg: longitudeDeg
+        )
+        let peakAltitude = max(peak.altitudeDeg, current.altitudeDeg, 0.0)
+        let fraction = peakAltitude > 0.0 ? clamp01(current.altitudeDeg / peakAltitude) : 0.0
+
+        return MoonAltitudeTrackInfo(
+            currentAltitudeDeg: current.altitudeDeg,
+            peakAltitudeDeg: peakAltitude,
+            visibleFraction: fraction,
+            isAboveHorizon: true,
+            peakDate: peak.date
+        )
+    }
+
     private static func synodicAgeFromPhaseRadians(_ rad: Double) -> Double {
         (rad / (2.0 * Double.pi)) * synodicMonth
     }
@@ -122,6 +186,137 @@ struct MoonPhaseCalculator {
         let alphaDeg = abs(180.0 - MoonMath.rad2deg(phaseAngleRad))
         let magnitude = fullMoonMagnitude + 0.026 * alphaDeg + 4.0e-9 * pow(alphaDeg, 4.0)
         return max(0.0, min(1.0, pow(10.0, -0.4 * (magnitude - fullMoonMagnitude))))
+    }
+
+    private static func horizonBoundaryDate(
+        from date: Date,
+        direction: TimeInterval,
+        step: TimeInterval,
+        maxSearch: TimeInterval,
+        latitudeDeg: Double,
+        longitudeDeg: Double
+    ) -> Date? {
+        var aboveDate = date
+        let sampleCount = Int(maxSearch / step)
+
+        for index in 1...sampleCount {
+            let sampleDate = date.addingTimeInterval(direction * Double(index) * step)
+            let altitude = position(for: sampleDate, latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg).altitudeDeg
+            if altitude <= 0.0 {
+                return refineHorizonBoundary(
+                    belowDate: sampleDate,
+                    aboveDate: aboveDate,
+                    latitudeDeg: latitudeDeg,
+                    longitudeDeg: longitudeDeg
+                )
+            }
+            aboveDate = sampleDate
+        }
+
+        return nil
+    }
+
+    private static func refineHorizonBoundary(
+        belowDate: Date,
+        aboveDate: Date,
+        latitudeDeg: Double,
+        longitudeDeg: Double
+    ) -> Date {
+        var low = min(belowDate.timeIntervalSinceReferenceDate, aboveDate.timeIntervalSinceReferenceDate)
+        var high = max(belowDate.timeIntervalSinceReferenceDate, aboveDate.timeIntervalSinceReferenceDate)
+        let lowIsAboveHorizon = position(
+            for: Date(timeIntervalSinceReferenceDate: low),
+            latitudeDeg: latitudeDeg,
+            longitudeDeg: longitudeDeg
+        ).altitudeDeg > 0.0
+
+        for _ in 0..<24 {
+            let mid = 0.5 * (low + high)
+            let midDate = Date(timeIntervalSinceReferenceDate: mid)
+            let midIsAboveHorizon = position(
+                for: midDate,
+                latitudeDeg: latitudeDeg,
+                longitudeDeg: longitudeDeg
+            ).altitudeDeg > 0.0
+
+            if midIsAboveHorizon == lowIsAboveHorizon {
+                low = mid
+            } else {
+                high = mid
+            }
+        }
+
+        return Date(timeIntervalSinceReferenceDate: 0.5 * (low + high))
+    }
+
+    private static func peakAltitude(
+        from startDate: Date,
+        to endDate: Date,
+        step: TimeInterval,
+        latitudeDeg: Double,
+        longitudeDeg: Double
+    ) -> (date: Date, altitudeDeg: Double) {
+        let start = startDate.timeIntervalSinceReferenceDate
+        let end = endDate.timeIntervalSinceReferenceDate
+        guard end > start else {
+            let altitude = position(for: startDate, latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg).altitudeDeg
+            return (startDate, altitude)
+        }
+
+        var bestDate = startDate
+        var bestAltitude = -Double.greatestFiniteMagnitude
+        let sampleCount = max(1, Int(ceil((end - start) / step)))
+
+        for index in 0...sampleCount {
+            let t = min(end, start + Double(index) * step)
+            let sampleDate = Date(timeIntervalSinceReferenceDate: t)
+            let altitude = position(for: sampleDate, latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg).altitudeDeg
+            if altitude > bestAltitude {
+                bestAltitude = altitude
+                bestDate = sampleDate
+            }
+        }
+
+        let refineStart = Date(timeIntervalSinceReferenceDate: max(start, bestDate.timeIntervalSinceReferenceDate - step))
+        let refineEnd = Date(timeIntervalSinceReferenceDate: min(end, bestDate.timeIntervalSinceReferenceDate + step))
+        return refinePeakAltitude(
+            from: refineStart,
+            to: refineEnd,
+            latitudeDeg: latitudeDeg,
+            longitudeDeg: longitudeDeg
+        )
+    }
+
+    private static func refinePeakAltitude(
+        from startDate: Date,
+        to endDate: Date,
+        latitudeDeg: Double,
+        longitudeDeg: Double
+    ) -> (date: Date, altitudeDeg: Double) {
+        var low = startDate.timeIntervalSinceReferenceDate
+        var high = endDate.timeIntervalSinceReferenceDate
+
+        for _ in 0..<32 {
+            let m1 = low + (high - low) / 3.0
+            let m2 = high - (high - low) / 3.0
+            let a1 = position(for: Date(timeIntervalSinceReferenceDate: m1), latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg).altitudeDeg
+            let a2 = position(for: Date(timeIntervalSinceReferenceDate: m2), latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg).altitudeDeg
+
+            if a1 < a2 {
+                low = m1
+            } else {
+                high = m2
+            }
+        }
+
+        let peakTime = 0.5 * (low + high)
+        let peakDate = Date(timeIntervalSinceReferenceDate: peakTime)
+        let altitude = position(for: peakDate, latitudeDeg: latitudeDeg, longitudeDeg: longitudeDeg).altitudeDeg
+        return (peakDate, altitude)
+    }
+
+    private static func clamp01(_ value: Double) -> Double {
+        max(0.0, min(1.0, value))
     }
 
     private static func sunLongitude(jd: Double) -> Double {
