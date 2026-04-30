@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="Assets/AppIcon.png" width="128" alt="MoonMenuBar icon" onerror="this.style.display='none'">
+<img src="Assets/AppIcon.png" width="128" alt="Clair de Lune icon" onerror="this.style.display='none'">
 
-# MoonMenuBar
+# Clair de Lune
 
 **A quiet companion for the night sky — living in your menu bar.**
 
@@ -11,12 +11,12 @@
 <sub>조용히 달을 곁에 두는 macOS 메뉴바 앱</sub>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)](https://github.com/woqhrl9494-cell/MoonMenuBar/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)](https://github.com/woqhrl9494-cell/Clair-de-Lune/releases)
 [![Swift](https://img.shields.io/badge/Swift-5-orange?logo=swift)](https://swift.org)
-[![Stars](https://img.shields.io/github/stars/woqhrl9494-cell/MoonMenuBar?style=social)](https://github.com/woqhrl9494-cell/MoonMenuBar/stargazers)
-[![Releases](https://img.shields.io/github/v/release/woqhrl9494-cell/MoonMenuBar?label=download)](https://github.com/woqhrl9494-cell/MoonMenuBar/releases/latest)
+[![Stars](https://img.shields.io/github/stars/woqhrl9494-cell/Clair-de-Lune?style=social)](https://github.com/woqhrl9494-cell/Clair-de-Lune/stargazers)
+[![Releases](https://img.shields.io/github/v/release/woqhrl9494-cell/Clair-de-Lune?label=download)](https://github.com/woqhrl9494-cell/Clair-de-Lune/releases/latest)
 
-<img src="Assets/demo.gif" width="720" alt="MoonMenuBar demo" onerror="this.style.display='none'">
+<img src="Assets/demo.gif" width="720" alt="Clair de Lune demo" onerror="this.style.display='none'">
 
 <br><br>
 
@@ -26,11 +26,11 @@
 
 ---
 
-## Why MoonMenuBar
+## Why Clair de Lune
 
 Most apps compete for your attention. This one doesn't.
 
-The moon is easier to forget than the weather. MoonMenuBar tucks the current phase into your menu bar — a single glyph that shifts from 🌑 to 🌕 and back, night after night. No notifications. No feeds. Just a quiet reminder that something ancient is still moving overhead.
+The moon is easier to forget than the weather. Clair de Lune tucks the current phase into your menu bar — a single glyph that shifts from 🌑 to 🌕 and back, night after night. No notifications. No feeds. Just a quiet reminder that something ancient is still moving overhead.
 
 ---
 
@@ -89,28 +89,28 @@ The moon is easier to forget than the weather. MoonMenuBar tucks the current pha
 
 ### Download (recommended)
 
-[![Download MoonMenuBar.dmg](https://img.shields.io/badge/Download-MoonMenuBar.dmg-2ea44f?style=for-the-badge&logo=apple)](https://github.com/woqhrl9494-cell/MoonMenuBar/releases/latest)
+[![Download Clair de Lune.dmg](https://img.shields.io/badge/Download-Clair%20de%20Lune.dmg-2ea44f?style=for-the-badge&logo=apple)](https://github.com/woqhrl9494-cell/Clair-de-Lune/releases/latest)
 
-Download the latest `.dmg`, open it, and drag `MoonMenuBar.app` to `/Applications`.
+Download the latest `.dmg`, open it, and drag `Clair de Lune.app` to `/Applications`.
 
 > Move the app to `/Applications` before enabling **Launch at Login** — running directly from the DMG volume can make the login item unreliable.
 
 ### First launch on macOS
 
-MoonMenuBar is an unsigned personal project, so macOS Gatekeeper may warn that the developer cannot be verified. If that happens, open **System Settings → Privacy & Security**, find the MoonMenuBar warning, and choose **Open Anyway**. You can also Control-click `MoonMenuBar.app` in `/Applications`, choose **Open**, then confirm **Open** once.
+Clair de Lune is an unsigned personal project, so macOS Gatekeeper may warn that the developer cannot be verified. If that happens, open **System Settings → Privacy & Security**, find the Clair de Lune warning, and choose **Open Anyway**. You can also Control-click `Clair de Lune.app` in `/Applications`, choose **Open**, then confirm **Open** once.
 
 ### Build from source
 
 ```bash
-git clone https://github.com/woqhrl9494-cell/MoonMenuBar.git
-cd MoonMenuBar
+git clone https://github.com/woqhrl9494-cell/Clair-de-Lune.git
+cd Clair-de-Lune
 ./build.sh
-open MoonMenuBar.app
+open "Clair de Lune.app"
 ```
 
 **Requirements:** macOS 14.0 Sonoma or later · Swift compiler · Xcode Command Line Tools
 
-The build script produces `MoonMenuBar.app` and `MoonMenuBar.dmg` locally (both are gitignored).
+The build script produces `Clair de Lune.app` and `Clair de Lune.dmg` locally (both are gitignored).
 
 ---
 
@@ -123,7 +123,7 @@ The build script produces `MoonMenuBar.app` and `MoonMenuBar.dmg` locally (both 
 - **v1.1.3** — Replaced the bundled app icon asset and attached an updated DMG.
 - **v1.1.2** — Redesigned the app icon with a dark rounded-square moon phase design.
 
-> See the [releases page](https://github.com/woqhrl9494-cell/MoonMenuBar/releases) for the full history.
+> See the [releases page](https://github.com/woqhrl9494-cell/Clair-de-Lune/releases) for the full history.
 
 ---
 
@@ -141,7 +141,7 @@ The build script produces `MoonMenuBar.app` and `MoonMenuBar.dmg` locally (both 
 
 ## How It Works
 
-MoonMenuBar computes everything locally using a two-body astronomical model inspired by *Astronomical Algorithms* (Jean Meeus, 2nd ed.).
+Clair de Lune computes everything locally using a two-body astronomical model inspired by *Astronomical Algorithms* (Jean Meeus, 2nd ed.).
 
 | Value | Method |
 |---|---|
@@ -188,7 +188,7 @@ The brightness value is astronomical illumination, not sky brightness. Near new 
 <details>
 <summary><b>Launch at Login doesn't work when I enable it.</b></summary>
 
-Make sure `MoonMenuBar.app` is in `/Applications`, not running directly from a mounted DMG. macOS's Login Items API requires the app to live in a permanent path.
+Make sure `Clair de Lune.app` is in `/Applications`, not running directly from a mounted DMG. macOS's Login Items API requires the app to live in a permanent path.
 
 </details>
 
@@ -206,8 +206,8 @@ Possibly, once the app is notarized and the core feature set is stable. The open
 Pull requests are welcome. For larger changes please open an issue first to discuss.
 
 ```bash
-git clone https://github.com/woqhrl9494-cell/MoonMenuBar.git
-cd MoonMenuBar
+git clone https://github.com/woqhrl9494-cell/Clair-de-Lune.git
+cd Clair-de-Lune
 ./build.sh   # verify everything builds before submitting a PR
 ```
 

@@ -4,7 +4,7 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR"
 
-APP_NAME="MoonMenuBar"
+APP_NAME="Clair de Lune"
 APP_BUNDLE="${APP_NAME}.app"
 DMG_NAME="${APP_NAME}.dmg"
 STAGE_DIR="dist/dmg_staging"

@@ -1,8 +1,8 @@
 .DS_Store
 
 # Build artifacts
-MoonMenuBar.app/
-MoonMenuBar.dmg
+Clair de Lune.app/
+Clair de Lune.dmg
 dist/
 *.dSYM/
 

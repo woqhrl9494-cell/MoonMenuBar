@@ -211,14 +211,16 @@ private final class MoonStatusView: NSView {
     }
 }
 
-final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
+final class ClairDeLuneApp: NSObject, NSApplicationDelegate {
+    private let legacyDefaultsSuiteName = "com.local.moonmenubar"
     private let displayModeKey = "displayMode"
     private let iconColorKey = "iconColor"
     private let surfaceStyleKey = "surfaceStyle"
     private let altitudeIconModeKey = "altitudeIconMode"
     private let legacyBelowHorizonIconPolicyKey = "belowHorizonIconPolicy"
-    private let loginAgentLabel = "com.local.moonmenubar.login"
-    private let loginAgentFileName = "com.local.moonmenubar.login.plist"
+    private let loginAgentLabel = "com.local.clairdelune.login"
+    private let loginAgentFileName = "com.local.clairdelune.login.plist"
+    private let legacyLoginAgentFileName = "com.local.moonmenubar.login.plist"
 
     private var statusItem: NSStatusItem?
     private var statusView: MoonStatusView?
@@ -235,7 +237,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     private var displayMode: DisplayMode {
         get {
-            let raw = UserDefaults.standard.string(forKey: displayModeKey)
+            let raw = storedString(forKey: displayModeKey)
             if raw == "altitudeIcon" {
                 return .iconOnly
             }
@@ -248,7 +250,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     private var iconColor: MoonIconColor {
         get {
-            let raw = UserDefaults.standard.string(forKey: iconColorKey)
+            let raw = storedString(forKey: iconColorKey)
             return MoonIconColor(rawValue: raw ?? "") ?? .white
         }
         set {
@@ -258,7 +260,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     private var surfaceStyle: MoonSurfaceStyle {
         get {
-            let raw = UserDefaults.standard.string(forKey: surfaceStyleKey)
+            let raw = storedString(forKey: surfaceStyleKey)
             if raw == "realCrater" {
                 return .craters
             }
@@ -271,24 +273,42 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     private var altitudeIconMode: AltitudeIconMode {
         get {
-            let raw = UserDefaults.standard.string(forKey: altitudeIconModeKey)
+            let raw = storedString(forKey: altitudeIconModeKey)
             if let mode = AltitudeIconMode(rawValue: raw ?? "") {
                 return mode
             }
 
-            let legacyDisplayMode = UserDefaults.standard.string(forKey: displayModeKey)
+            let legacyDisplayMode = storedString(forKey: displayModeKey)
             guard legacyDisplayMode == "altitudeIcon" else {
                 return .disabled
             }
 
-            let legacyPolicy = UserDefaults.standard.string(forKey: legacyBelowHorizonIconPolicyKey)
+            let legacyPolicy = storedString(forKey: legacyBelowHorizonIconPolicyKey)
             let migratedMode: AltitudeIconMode = legacyPolicy == "peek" ? .peekBelowHorizon : .hideBelowHorizon
+            UserDefaults.standard.set(DisplayMode.iconOnly.rawValue, forKey: displayModeKey)
             UserDefaults.standard.set(migratedMode.rawValue, forKey: altitudeIconModeKey)
             return migratedMode
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: altitudeIconModeKey)
         }
+    }
+
+    private var legacyDefaults: UserDefaults? {
+        UserDefaults(suiteName: legacyDefaultsSuiteName)
+    }
+
+    private func storedString(forKey key: String) -> String? {
+        if let value = UserDefaults.standard.string(forKey: key) {
+            return value
+        }
+
+        guard let value = legacyDefaults?.string(forKey: key) else {
+            return nil
+        }
+
+        UserDefaults.standard.set(value, forKey: key)
+        return value
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -456,7 +476,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
-        let aboutItem = NSMenuItem(title: "About MoonMenuBar", action: #selector(showAbout), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "About Clair de Lune", action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
@@ -634,11 +654,13 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     }
 
     private func enableLoginItem() {
+        removeLegacyLoginItem()
+
         let appPath = Bundle.main.bundlePath
         if appPath.hasPrefix("/Volumes/") {
             showAlert(
                 title: "Move to Applications first",
-                message: "Apps launched from inside a DMG may not be available at the next login.\nMove MoonMenuBar.app to the Applications folder, then reopen it."
+                message: "Apps launched from inside a DMG may not be available at the next login.\nMove Clair de Lune.app to the Applications folder, then reopen it."
             )
             return
         }
@@ -666,11 +688,19 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     private func disableLoginItem() {
         unloadLaunchAgent()
         try? FileManager.default.removeItem(at: loginAgentURL)
+        removeLegacyLoginItem()
     }
 
     private func isLoginItemEnabled() -> Bool {
+        if isLoginItemEnabled(at: loginAgentURL) {
+            return true
+        }
+        return isLoginItemEnabled(at: legacyLoginAgentURL)
+    }
+
+    private func isLoginItemEnabled(at agentURL: URL) -> Bool {
         guard
-            let data = try? Data(contentsOf: loginAgentURL),
+            let data = try? Data(contentsOf: agentURL),
             let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil),
             let dict = plist as? [String: Any],
             let args = dict["ProgramArguments"] as? [String],
@@ -685,6 +715,18 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/LaunchAgents")
             .appendingPathComponent(loginAgentFileName)
+    }
+
+    private var legacyLoginAgentURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents")
+            .appendingPathComponent(legacyLoginAgentFileName)
+    }
+
+    private func removeLegacyLoginItem() {
+        runLaunchctl(["bootout", "gui/\(getuid())", legacyLoginAgentURL.path])
+        runLaunchctl(["unload", legacyLoginAgentURL.path])
+        try? FileManager.default.removeItem(at: legacyLoginAgentURL)
     }
 
     private func unloadLaunchAgent() {
@@ -713,7 +755,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
     @objc private func showAbout() {
         showAlert(
-            title: "MoonMenuBar",
+            title: "Clair de Lune",
             message: "Created by Jaebok Lee\nok7393@hanyang.ac.kr"
         )
     }
