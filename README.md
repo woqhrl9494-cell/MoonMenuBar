@@ -20,7 +20,7 @@
 
 <br><br>
 
-<img src="Assets/demo-altitude-rise.gif" width="720" alt="Altitude rise icon mode demo" onerror="this.style.display='none'">
+<img src="Assets/demo-altitude-rise.gif" width="720" alt="Clair de Lune altitude rise icon mode demo" onerror="this.style.display='none'">
 
 </div>
 
