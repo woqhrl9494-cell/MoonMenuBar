@@ -116,10 +116,7 @@ The build script produces `Clair de Lune.app` and `Clair de Lune.dmg` locally (b
 
 ## Recent Updates
 
-- **v1.1.5** — Renamed the app and repository to Clair de Lune, with updated app bundle, DMG, README, and GitHub links.
-- **v1.1.5** — Grouped menu bar content and moon altitude behavior into two arrow submenus.
-- **v1.1.5** — Altitude rise icon mode: ignore altitude, hide below the horizon, or peek below the horizon; rise into center by 20° altitude and hold centered above that threshold.
-- **v1.1.5** — Updated the yellow moon palette and crater texture to better match a warm photographic full moon.
+- **v1.1.5** — Renamed the app and repository to Clair de Lune, refreshed README media and GitHub links, grouped display/altitude controls into arrow submenus, added altitude-aware icon modes, and refined the warm yellow crater texture.
 - **v1.1.4** — Customizable moon icon styles: white, silver, ivory, yellow, and optional moon surface marks.
 - **v1.1.3** — Replaced the bundled app icon asset and attached an updated DMG.
 - **v1.1.2** — Redesigned the app icon with a dark rounded-square moon phase design.
