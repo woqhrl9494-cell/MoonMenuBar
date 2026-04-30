@@ -38,6 +38,7 @@ struct MoonPositionInfo {
 struct MoonAltitudeTrackInfo {
     let currentAltitudeDeg: Double
     let peakAltitudeDeg: Double
+    let altitudeFraction: Double
     let visibleFraction: Double
     let isAboveHorizon: Bool
     let peakDate: Date?
@@ -45,6 +46,8 @@ struct MoonAltitudeTrackInfo {
 
 struct MoonPhaseCalculator {
     static let synodicMonth: Double = 29.530588853
+    static let minimumAltitudeIconVisibleFraction: Double = 0.20
+    static let altitudeIconCenterAltitudeDeg: Double = 20.0
     private static let fullMoonMagnitude = -12.74
 
     struct LocationAwareTimeZone {
@@ -127,15 +130,17 @@ struct MoonPhaseCalculator {
             return MoonAltitudeTrackInfo(
                 currentAltitudeDeg: current.altitudeDeg,
                 peakAltitudeDeg: 0.0,
-                visibleFraction: 0.0,
+                altitudeFraction: 0.0,
+                visibleFraction: normalizeAltitudeIconVisibleFraction(0.0),
                 isAboveHorizon: false,
                 peakDate: nil
             )
         }
 
-        // Formula: visibleFraction = h(now) / max_t h(t), where h(t) is lunar
-        // altitude over the current visible pass. The samples are ephemeris
-        // predictions, not future measurements.
+        // Formula: altitudeFraction = clamp(h(now) / 20 deg, 0, 1).
+        // The icon reaches the menu-bar center once the Moon reaches 20 deg
+        // altitude, even if the current pass peak is much higher. The peak
+        // search below is kept for informational menu text only.
         let step: TimeInterval = 10.0 * 60.0
         let maxHorizonSearch: TimeInterval = 48.0 * 60.0 * 60.0
         let fallbackHalfWindow: TimeInterval = 18.0 * 60.0 * 60.0
@@ -166,12 +171,14 @@ struct MoonPhaseCalculator {
             longitudeDeg: longitudeDeg
         )
         let peakAltitude = max(peak.altitudeDeg, current.altitudeDeg, 0.0)
-        let fraction = peakAltitude > 0.0 ? clamp01(current.altitudeDeg / peakAltitude) : 0.0
+        let altitudeFraction = normalizeAltitudeIconProgress(current.altitudeDeg)
+        let visibleFraction = normalizeAltitudeIconVisibleFraction(altitudeFraction)
 
         return MoonAltitudeTrackInfo(
             currentAltitudeDeg: current.altitudeDeg,
             peakAltitudeDeg: peakAltitude,
-            visibleFraction: fraction,
+            altitudeFraction: altitudeFraction,
+            visibleFraction: visibleFraction,
             isAboveHorizon: true,
             peakDate: peak.date
         )
@@ -317,6 +324,18 @@ struct MoonPhaseCalculator {
 
     private static func clamp01(_ value: Double) -> Double {
         max(0.0, min(1.0, value))
+    }
+
+    private static func normalizeAltitudeIconVisibleFraction(_ altitudeFraction: Double) -> Double {
+        let minimumVisibleFraction = clamp01(minimumAltitudeIconVisibleFraction)
+        return minimumVisibleFraction + (1.0 - minimumVisibleFraction) * clamp01(altitudeFraction)
+    }
+
+    private static func normalizeAltitudeIconProgress(_ altitudeDeg: Double) -> Double {
+        guard altitudeIconCenterAltitudeDeg > 0.0 else {
+            return altitudeDeg > 0.0 ? 1.0 : 0.0
+        }
+        return clamp01(altitudeDeg / altitudeIconCenterAltitudeDeg)
     }
 
     private static func sunLongitude(jd: Double) -> Double {

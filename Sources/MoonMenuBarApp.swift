@@ -8,6 +8,20 @@ private enum DisplayMode: String {
     case altitudeIcon
 }
 
+private enum BelowHorizonIconPolicy: String, CaseIterable {
+    case hidden
+    case peek
+
+    var menuTitle: String {
+        switch self {
+        case .hidden:
+            return "Hide below horizon"
+        case .peek:
+            return "Peek below horizon"
+        }
+    }
+}
+
 private final class MenuInfoItemView: NSView {
     private let label = NSTextField(labelWithString: "")
 
@@ -43,6 +57,7 @@ private final class MoonStatusView: NSView {
     private var iconColor: MoonIconColor = .white
     private var surfaceStyle: MoonSurfaceStyle = .none
     private var altitudeTrack: MoonAltitudeTrackInfo?
+    private var belowHorizonIconPolicy: BelowHorizonIconPolicy = .hidden
     private var isPressed = false
 
     private let iconSize: CGFloat = 18.0
@@ -84,13 +99,15 @@ private final class MoonStatusView: NSView {
         displayMode: DisplayMode,
         iconColor: MoonIconColor,
         surfaceStyle: MoonSurfaceStyle,
-        altitudeTrack: MoonAltitudeTrackInfo?
+        altitudeTrack: MoonAltitudeTrackInfo?,
+        belowHorizonIconPolicy: BelowHorizonIconPolicy
     ) {
         self.phase = phase
         self.displayMode = displayMode
         self.iconColor = iconColor
         self.surfaceStyle = surfaceStyle
         self.altitudeTrack = altitudeTrack
+        self.belowHorizonIconPolicy = belowHorizonIconPolicy
         needsDisplay = true
     }
 
@@ -134,16 +151,17 @@ private final class MoonStatusView: NSView {
             return centeredRect
         }
 
-        guard altitudeTrack.isAboveHorizon, altitudeTrack.peakAltitudeDeg > 0.0 else {
+        guard altitudeTrack.isAboveHorizon || belowHorizonIconPolicy == .peek else {
             return nil
         }
 
-        // Altitude mode maps the horizon to a fully clipped icon and the
-        // current visible-pass peak to the same centered placement as normal mode.
-        let fraction = CGFloat(max(0.0, min(1.0, altitudeTrack.visibleFraction)))
-        let hiddenY = -iconSize
+        // Altitude mode maps the horizon to a 20%-visible icon and the current
+        // 20 deg altitude threshold to the same centered placement as normal mode.
+        let fraction = CGFloat(max(0.0, min(1.0, altitudeTrack.altitudeFraction)))
+        let minimumVisibleFraction = CGFloat(MoonPhaseCalculator.minimumAltitudeIconVisibleFraction)
+        let lowestY = -iconSize * (1.0 - minimumVisibleFraction)
         let peakY = floor((bounds.height - iconSize) * 0.5)
-        let y = hiddenY + (peakY - hiddenY) * fraction
+        let y = lowestY + (peakY - lowestY) * fraction
 
         return NSRect(
             x: centeredRect.origin.x,
@@ -182,6 +200,7 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
     private let displayModeKey = "displayMode"
     private let iconColorKey = "iconColor"
     private let surfaceStyleKey = "surfaceStyle"
+    private let belowHorizonIconPolicyKey = "belowHorizonIconPolicy"
     private let loginAgentLabel = "com.local.moonmenubar.login"
     private let loginAgentFileName = "com.local.moonmenubar.login.plist"
 
@@ -228,6 +247,16 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         }
         set {
             UserDefaults.standard.set(newValue.rawValue, forKey: surfaceStyleKey)
+        }
+    }
+
+    private var belowHorizonIconPolicy: BelowHorizonIconPolicy {
+        get {
+            let raw = UserDefaults.standard.string(forKey: belowHorizonIconPolicyKey)
+            return BelowHorizonIconPolicy(rawValue: raw ?? "") ?? .hidden
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: belowHorizonIconPolicyKey)
         }
     }
 
@@ -293,7 +322,8 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
                 displayMode: displayMode,
                 iconColor: iconColor,
                 surfaceStyle: surfaceStyle,
-                altitudeTrack: altitudeTrack
+                altitudeTrack: altitudeTrack,
+                belowHorizonIconPolicy: belowHorizonIconPolicy
             )
             statusView.toolTip = statusToolTip(
                 phase: phase,
@@ -342,14 +372,23 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
             }
 
             if let altitudeTrack, altitudeTrack.isAboveHorizon, let peakDate = altitudeTrack.peakDate {
-                let fractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
+                let altitudeFractionText = String(format: "%.0f%%", altitudeTrack.altitudeFraction * 100.0)
+                let visibleFractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
                 addDisabledItem(
                     String(format: "Current pass peak: %+.1f° at %@", altitudeTrack.peakAltitudeDeg, dateFormatter.string(from: peakDate)),
                     to: menu
                 )
-                addDisabledItem("Altitude icon height: \(fractionText) of current pass peak", to: menu)
+                addDisabledItem(String(format: "Altitude icon center threshold: %.0f°", MoonPhaseCalculator.altitudeIconCenterAltitudeDeg), to: menu)
+                addDisabledItem("Altitude progress: \(altitudeFractionText) toward center", to: menu)
+                addDisabledItem("Altitude icon height: \(visibleFractionText) (min 20%)", to: menu)
             } else {
-                addDisabledItem("Altitude icon height: hidden below horizon", to: menu)
+                let visibleFractionText = String(format: "%.0f%%", (altitudeTrack?.visibleFraction ?? 0.0) * 100.0)
+                addDisabledItem("Altitude progress: below horizon", to: menu)
+                if belowHorizonIconPolicy == .peek {
+                    addDisabledItem("Altitude icon height: \(visibleFractionText) (peek below horizon)", to: menu)
+                } else {
+                    addDisabledItem("Altitude icon height: hidden below horizon", to: menu)
+                }
             }
         } else {
             addDisabledItem("Location: Waiting...", to: menu)
@@ -378,6 +417,8 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         altitudeIconItem.target = self
         altitudeIconItem.state = displayMode == .altitudeIcon ? .on : .off
         menu.addItem(altitudeIconItem)
+
+        addBelowHorizonIconPolicyMenu(to: menu)
 
         menu.addItem(NSMenuItem.separator())
         addIconColorMenu(to: menu)
@@ -428,10 +469,16 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
 
         if let altitudeTrack {
             if altitudeTrack.isAboveHorizon {
-                let fractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
-                parts.append(String(format: "Altitude: %+.1f° / peak %+.1f° (%@)", altitudeTrack.currentAltitudeDeg, altitudeTrack.peakAltitudeDeg, fractionText))
+                let altitudeFractionText = String(format: "%.0f%%", altitudeTrack.altitudeFraction * 100.0)
+                let visibleFractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
+                parts.append(String(format: "Altitude: %+.1f° / center %.0f° (progress %@, icon %@)", altitudeTrack.currentAltitudeDeg, MoonPhaseCalculator.altitudeIconCenterAltitudeDeg, altitudeFractionText, visibleFractionText))
             } else {
-                parts.append(String(format: "Altitude: %+.1f° (below horizon)", altitudeTrack.currentAltitudeDeg))
+                let visibleFractionText = String(format: "%.0f%%", altitudeTrack.visibleFraction * 100.0)
+                if belowHorizonIconPolicy == .peek {
+                    parts.append(String(format: "Altitude: %+.1f° (below horizon, icon %@)", altitudeTrack.currentAltitudeDeg, visibleFractionText))
+                } else {
+                    parts.append(String(format: "Altitude: %+.1f° (below horizon, icon hidden)", altitudeTrack.currentAltitudeDeg))
+                }
             }
         } else if displayMode == .altitudeIcon {
             parts.append("Altitude: waiting for location")
@@ -449,6 +496,22 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
             item.target = self
             item.representedObject = color.rawValue
             item.state = iconColor == color ? .on : .off
+            submenu.addItem(item)
+        }
+
+        parent.submenu = submenu
+        menu.addItem(parent)
+    }
+
+    private func addBelowHorizonIconPolicyMenu(to menu: NSMenu) {
+        let parent = NSMenuItem(title: "Below horizon icon", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+
+        for policy in BelowHorizonIconPolicy.allCases {
+            let item = NSMenuItem(title: policy.menuTitle, action: #selector(setBelowHorizonIconPolicy(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = policy.rawValue
+            item.state = belowHorizonIconPolicy == policy ? .on : .off
             submenu.addItem(item)
         }
 
@@ -508,6 +571,18 @@ final class MoonMenuBarApp: NSObject, NSApplicationDelegate {
         }
 
         surfaceStyle = style
+        updateStatus()
+    }
+
+    @objc private func setBelowHorizonIconPolicy(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let policy = BelowHorizonIconPolicy(rawValue: rawValue)
+        else {
+            return
+        }
+
+        belowHorizonIconPolicy = policy
         updateStatus()
     }
 

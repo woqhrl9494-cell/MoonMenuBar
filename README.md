@@ -51,7 +51,11 @@ The moon is easier to forget than the weather. MoonMenuBar tucks the current pha
   </tr>
   <tr>
     <td>🌘 <strong>Altitude rise icon</strong></td>
-    <td>Optional menu bar mode where the moon rises into view as its altitude climbs</td>
+    <td>Optional menu bar mode where the icon rises with lunar altitude, reaches center at 20°, then stays centered</td>
+  </tr>
+  <tr>
+    <td>↕️ <strong>Below-horizon behavior</strong></td>
+    <td>Choose whether the altitude icon is hidden below the horizon or leaves a small peek visible</td>
   </tr>
   <tr>
     <td>🔆 <strong>Adaptive icon brightness</strong></td>
@@ -59,7 +63,7 @@ The moon is easier to forget than the weather. MoonMenuBar tucks the current pha
   </tr>
   <tr>
     <td>🎨 <strong>Custom moon style</strong></td>
-    <td>Choose white, silver, ivory, or yellow, with an optional moon surface texture</td>
+    <td>Choose white, silver, ivory, or a warmer photo-inspired yellow, with an optional brighter yellow crater texture</td>
   </tr>
   <tr>
     <td>📍 <strong>Location-aware</strong></td>
@@ -112,6 +116,8 @@ The build script produces `MoonMenuBar.app` and `MoonMenuBar.dmg` locally (both 
 
 ## Recent Updates
 
+- **Current** — Altitude rise icon mode: hide/peek below the horizon, rise into center by 20° altitude, and hold centered above that threshold.
+- **Current** — Updated the yellow moon palette and crater texture to better match a warm photographic full moon.
 - **v1.1.4** — Customizable moon icon styles: white, silver, ivory, yellow, and optional moon surface marks.
 - **v1.1.3** — Replaced the bundled app icon asset and attached an updated DMG.
 - **v1.1.2** — Redesigned the app icon with a dark rounded-square moon phase design.
@@ -126,9 +132,9 @@ The build script produces `MoonMenuBar.app` and `MoonMenuBar.dmg` locally (both 
 |:---:|:---:|
 | <img src="Assets/screenshot-menubar.png" width="360" alt="Menu bar icon" onerror="this.style.display='none'"> | <img src="Assets/screenshot-dropdown.png" width="360" alt="Dropdown panel" onerror="this.style.display='none'"> |
 
-| Waxing crescent | Full moon |
+| Below-horizon options | Moon color options |
 |:---:|:---:|
-| <img src="Assets/screenshot-waxing.png" width="360" alt="Waxing crescent" onerror="this.style.display='none'"> | <img src="Assets/screenshot-full.png" width="360" alt="Full moon" onerror="this.style.display='none'"> |
+| <img src="Assets/screenshot-waxing.png" width="360" alt="Below-horizon icon options" onerror="this.style.display='none'"> | <img src="Assets/screenshot-full.png" width="360" alt="Moon color options" onerror="this.style.display='none'"> |
 
 ---
 
@@ -141,6 +147,7 @@ MoonMenuBar computes everything locally using a two-body astronomical model insp
 | Phase angle | Ecliptic longitude difference between Moon and Sun |
 | Illumination % | `(1 − cos θ) / 2 × 100` where θ is the phase angle |
 | Altitude / Azimuth | Equatorial → horizontal coordinate transform using your latitude, longitude, and local sidereal time |
+| Altitude rise icon | `progress = clamp(altitude / 20°, 0, 1)`, then `height = 20% + 80% × progress` |
 | Icon brightness | Illumination mapped to display luminance |
 
 **Transparency note:** The model is a fast approximation — it omits atmospheric refraction, terrain obstructions, clouds, and higher-order orbital perturbations. Expect accuracy within ~1° for altitude/azimuth and within ~1% for illumination under typical conditions. This is intentional: the goal is a lightweight, offline-first companion, not an ephemeris engine.

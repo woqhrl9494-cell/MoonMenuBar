@@ -28,7 +28,7 @@ enum MoonIconColor: String, CaseIterable {
         case .ivory:
             return NSColor(calibratedRed: 1.00, green: 0.93, blue: 0.74, alpha: 1.0)
         case .yellow:
-            return NSColor(calibratedRed: 1.00, green: 0.80, blue: 0.04, alpha: 1.0)
+            return NSColor(calibratedRed: 0.95, green: 0.83, blue: 0.29, alpha: 1.0)
         }
     }
 }
@@ -151,7 +151,8 @@ enum MoonIconRenderer {
                     case .none:
                         break
                     case .craters:
-                        let tone = realCraterTone(atX: x, y: y, maria: realMaria, impacts: realImpacts)
+                        let rawTone = realCraterTone(atX: x, y: y, maria: realMaria, impacts: realImpacts)
+                        let tone = adjustedCraterTone(rawTone, for: color)
                         if tone.shade > 0.0 || tone.highlight > 0.0 {
                             red = min(1.0, red * (1.0 - tone.shade) + rgb.red * tone.highlight)
                             green = min(1.0, green * (1.0 - tone.shade) + rgb.green * tone.highlight)
@@ -277,6 +278,21 @@ private func realCraterTone(
         shade: min(0.46, shade),
         highlight: min(0.14, highlight),
         alpha: min(0.10, alpha)
+    )
+}
+
+private func adjustedCraterTone(
+    _ tone: (shade: Double, highlight: Double, alpha: Double),
+    for color: MoonIconColor
+) -> (shade: Double, highlight: Double, alpha: Double) {
+    guard color == .yellow else {
+        return tone
+    }
+
+    return (
+        shade: min(0.34, tone.shade * 0.68),
+        highlight: min(0.20, tone.highlight + tone.shade * 0.08),
+        alpha: tone.alpha
     )
 }
 
