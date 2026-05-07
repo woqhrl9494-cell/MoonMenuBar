@@ -116,8 +116,8 @@ The build script produces `Clair de Lune.app` and `Clair de Lune.dmg` locally (b
 
 ## Recent Updates
 
-- **v1.1.6** — Moon phase icons now leave the unlit shadow side transparent instead of drawing a dim dark disk.
-- **v1.1.5** — Renamed the app and repository to Clair de Lune, refreshed README media and GitHub links, grouped display/altitude controls into arrow submenus, added altitude-aware icon modes, and refined the warm yellow crater texture.
+- **v1.1.6** — Made the unlit side of menu bar moon phase icons transparent.
+- **v1.1.5** — Renamed the app to Clair de Lune and refreshed the menu bar display controls.
 - **v1.1.4** — Customizable moon icon styles: white, silver, ivory, yellow, and optional moon surface marks.
 - **v1.1.3** — Replaced the bundled app icon asset and attached an updated DMG.
 - **v1.1.2** — Redesigned the app icon with a dark rounded-square moon phase design.
