@@ -108,7 +108,7 @@ enum MoonIconRenderer {
         let radius = Double(pixels) * 0.46
         let perceptualLevel = 0.55 + 0.45 * pow(brightness, 0.45)
         let litAlpha = 0.72 + 0.28 * perceptualLevel
-        let darkAlpha = 0.10
+        let shadowAlpha = 0.0
         let edgeAlpha = 0.78
         let realMaria = [
             RealMoonMare(x: -0.42, y: -0.40, radiusX: 0.31, radiusY: 0.20, angle: -0.28, strength: 0.30),
@@ -144,7 +144,7 @@ enum MoonIconRenderer {
                 var red = rgb.red * sphereShade
                 var green = rgb.green * sphereShade
                 var blue = rgb.blue * sphereShade
-                var alpha = isLit ? litAlpha : darkAlpha
+                var alpha = isLit ? litAlpha : shadowAlpha
 
                 if isLit {
                     switch surfaceStyle {
@@ -173,7 +173,7 @@ enum MoonIconRenderer {
                     y: py
                 )
 
-                if isLimb {
+                if isLimb && isLit {
                     rep.setColor(
                         NSColor(
                             calibratedRed: CGFloat(rgb.red),
