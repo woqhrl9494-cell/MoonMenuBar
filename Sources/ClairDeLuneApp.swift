@@ -753,11 +753,28 @@ final class ClairDeLuneApp: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
 
+    private var appVersionText: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String
+        let build = info["CFBundleVersion"] as? String
+
+        switch (version, build) {
+        case let (version?, build?) where !version.isEmpty && !build.isEmpty:
+            return "Version \(version) (\(build))"
+        case let (version?, _) where !version.isEmpty:
+            return "Version \(version)"
+        default:
+            return "Version unavailable"
+        }
+    }
+
     @objc private func showAbout() {
-        showAlert(
-            title: "Clair de Lune",
-            message: "Created by Jaebok Lee\nok7393@hanyang.ac.kr"
-        )
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Clair de Lune"
+        alert.informativeText = "\(appVersionText)\nCreated by Jaebok Lee\nok7393@hanyang.ac.kr"
+        alert.alertStyle = .informational
+        alert.runModal()
     }
 
     @objc private func quitApp() {
